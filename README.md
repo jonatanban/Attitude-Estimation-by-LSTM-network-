@@ -1,39 +1,36 @@
-# Attitude Estimation by LSTM network
-use  AI (LSTM network) to find and remove the bias and drift , right before the data goes into the Kalman Filter
+# Hybrid AI-ESKF: Deep Learning Enhanced Inertial Navigation
 
-# ECEF Inertial Navigation and EKF Toolkit
+Traditional Inertial Navigation Systems (INS) suffer from unbounded error growth due to accelerometer bias and gyroscope drift. While an Error-State Kalman Filter (ESKF) with Zero-Velocity Updates (ZUPT) can bound position and tilt errors, azimuth (heading) remains weakly observable in short static alignments.
 
-A Python-based toolkit for high-fidelity Inertial Navigation System (INS) processing in Earth-Centered, Earth-Fixed (ECEF) coordinates. This repository provides a complete pipeline for IMU kinematics, coordinate transformations, and an Error-State Extended Kalman Filter (EKF) featuring Zero-Velocity Updates (ZUPT).
+This repository provides a hybrid Model-Based Deep Learning (MBDL) solution. We train a compact Long Short-Term Memory (LSTM) network to accurately estimate and remove IMU bias and drift from raw sensor windows before the data enters the physics-based ESKF. By delegating the hard-to-observe noise components to the learned estimator, the classical filter achieves much tighter position bounds and prevents azimuth drift.
 
-## Features
+## Key Features
 
-* **Attitude Kinematics:** Full support for Quaternions, Direction Cosine Matrices (DCM), and Euler angles.
-* **Coordinate Transformations:** Convert seamlessly between ECEF, Geodetic (Lat/Lon/Alt), and North-East-Down (NED) frames.
-* **High-Fidelity Gravity Model:** Computes gravity vectors taking into account Earth's J2, J3, and J4 spherical harmonic perturbations.
-* **Inertial Propagation:** Integrates specific force and angular rate data to track position, velocity, and attitude over time.
-* **15-State Error EKF:** Tracks and corrects errors in Position, Velocity, Tilt, Accelerometer Bias, and Gyroscope Bias.
-* **ZUPT Integration:** Includes Zero-Velocity Update logic to drastically reduce drift in land-based or pedestrian navigation scenarios.
+### AI-Powered Noise Estimation (LSTM)
+* Real-time Bias and Drift Tracking: Uses a trained LSTM to isolate static bias and stochastic drift from 0.25-second windows of raw IMU data.
+* Pre-Filter Injection: Cleans the IMU signals before kinematic integration, relieving the Kalman Filter from the need to estimate large biases online.
+
+### High-Fidelity Physics Engine (ECEF & EKF)
+* Attitude Kinematics: Full, robust support for Quaternions, Direction Cosine Matrices (DCM), and Euler angles.
+* Coordinate Transformations: Seamless conversions between ECEF, Geodetic (Lat/Lon/Alt), and local North-East-Down (NED) frames.
+* Advanced Gravity Model: Computes gravity vectors incorporating Earth's J2, J3, and J4 spherical harmonic perturbations.
+* 15-State Error-State EKF: Tracks position, velocity, tilt, accelerometer bias, and gyroscope drift.
+* ZUPT Integration: Implements Zero-Velocity Updates to aggressively bound integration drift during stationary periods.
 
 ## Dependencies
 
-* `numpy`
-* `scipy` (If utilizing matrix square roots in future updates)
-* `torch` (If extending to AI-IMU or neural network integrations)
+* numpy: Core matrix and mathematical operations.
+* scipy: Advanced linear algebra routines.
+* torch: PyTorch framework for LSTM neural network inference and training.
+* plotly: Data visualization for navigation performance and A/B testing.
 
-*Note: Ensure your Python environment defaults to `float64` for numerical stability during EKF propagation.*
+Note: The navigation physics engine strictly utilizes 64-bit floating-point format (double precision) to ensure numerical stability during kinematic integration.
 
-## Core Modules
+## Usage Pipeline
 
-* `nav_ecef_to_geod` / `nav_c_ecef_to_ned`: Coordinate frame transformations.
-* `nav_inertial_prop`: Propagates the navigation state forward in time using IMU increments.
-* `nav_kal_prop`: Predicts the EKF error-state covariance forward.
-* `nav_zupt_update`: Applies a Zero-Velocity measurement to compute the Kalman gain and error state.
-* `nav_correct`: Applies the EKF error state back into the main navigation state (closed-loop correction).
-
-## Usage Overview
-
-1. Initialize your filter states and covariance using `nav_kal_init`.
-2. For every incoming IMU sample, propagate the main state using `nav_inertial_prop`.
-3. Compute the system dynamics matrix using `nav_dyn_mat` and propagate the EKF covariance via `nav_kal_prop`.
-4. When a zero-velocity event is detected, trigger `nav_zupt_update` to estimate the current state errors.
-5. Apply the calculated errors to your main state using `nav_correct` and reset the error vector.
+1. AI Pre-Processing: Buffer incoming raw IMU data and pass it through the IMUNoiseEstimator (LSTM) to predict the current bias and drift.
+2. Signal Correction: Subtract the AI's predicted bias and drift from the raw IMU measurements.
+3. Initialization: Initialize the 15-state ESKF and covariance matrices using the kalman initialization function.
+4. Kinematic Propagation: Integrate the cleaned specific forces and angular rates to track position, velocity, and attitude.
+5. Covariance Prediction: Compute the system dynamics matrix and propagate the error covariance forward in time.
+6. ZUPT & Correction: Upon detecting a stationary event, trigger a Zero-Velocity Update to calculate the Kalman gain, then feed the error state back into the main kinematics via closed-loop correction.
