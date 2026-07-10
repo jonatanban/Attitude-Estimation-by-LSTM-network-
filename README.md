@@ -34,3 +34,5 @@ Note: The navigation physics engine strictly utilizes 64-bit floating-point form
 4. Kinematic Propagation: Integrate the cleaned specific forces and angular rates to track position, velocity, and attitude.
 5. Covariance Prediction: Compute the system dynamics matrix and propagate the error covariance forward in time.
 6. ZUPT & Correction: Upon detecting a stationary event, trigger a Zero-Velocity Update to calculate the Kalman gain, then feed the error state back into the main kinematics via closed-loop correction.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USERNAME/REPOSITORY/blob/main/YOUR_NOTEBOOK.ipynb)
